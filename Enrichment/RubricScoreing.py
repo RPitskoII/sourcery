@@ -283,10 +283,16 @@ CRITICAL SCORING RULES:
 - Most companies should score 4-6 overall. A score of 8+ means multiple strong, concrete, recent signals were found. This should be rare.
 - An absence of evidence is NOT evidence of absence, but it IS a reason to score conservatively.
 
-=== FIT SCORE (start at 0, add points with evidence — max 10) ===
+=== FIT SCORE (start at 0, add points with evidence) ===
 
 +2 points: Company is confirmed SaaS, healthtech, fintech, or e-commerce
    Evidence needed: Industry classification, product description, or website confirms this. Not just "technology company."
+
++2 point: Handles sensitive data (health/HIPAA, financial, biometric, children's/COPPA)
+   Evidence needed: Product description, privacy policy, or research explicitly mentions handling these data types. NOT assumed from industry alone.
+
++2 point: No existing privacy counsel or in-house legal team detected
+   Evidence needed: No mention of General Counsel, privacy team, or outside privacy firm found in research. If a legal hire was JUST made, this still counts (they're new and finding gaps).
 
 +1 point: Employee count is 25-200
    Evidence needed: From prospect data (# Employees field).
@@ -294,50 +300,41 @@ CRITICAL SCORING RULES:
 +1 point: Raised at least a Seed round
    Evidence needed: From prospect data (Total Funding, Latest Funding fields) or research confirms funding.
 
-+1 point: Handles sensitive data (health/HIPAA, financial, biometric, children's/COPPA)
-   Evidence needed: Product description, privacy policy, or research explicitly mentions handling these data types. NOT assumed from industry alone.
-
 +1 point: B2B with enterprise customers or actively pursuing enterprise sales
    Evidence needed: Enterprise pricing page, SOC 2 badge on website, case studies with enterprise logos, or job postings mentioning enterprise sales.
-
-+1 point: US-based company
-   Evidence needed: From prospect data (Country field).
 
 +1 point: Product involves collecting/processing user PII at scale
    Evidence needed: Product description or research shows they collect personal data from end users (not just internal employee data).
 
-+1 point: No existing privacy counsel or in-house legal team detected
-   Evidence needed: No mention of General Counsel, privacy team, or outside privacy firm found in research. If a legal hire was JUST made, this still counts (they're new and finding gaps).
-
 +1 point: Company is in active growth phase
    Evidence needed: Recent job postings, press about expansion, new product launches, or headcount growth found in research.
 
-=== TIMING SCORE (start at 0, add points with evidence — max 10) ===
+=== TIMING SCORE (start at 0, add points with evidence) ===
 
-+2 points: Active data breach or recent security incident
++5 points: Active data breach or recent security incident within the last 3 months
    Evidence needed: News article, state AG database entry, HHS breach portal, or company disclosure found. Must cite source.
+
++5 points: New state privacy law affecting them takes effect within 6 months
+   Evidence needed: Evidence they have users in a state with upcoming privacy law deadlines (Texas, Oregon, Montana, etc.).
+
++3 points: Expanding into EU/UK (GDPR trigger)
+   Evidence needed: Job posting for EU-based roles, international office announcement, GDPR-related job descriptions, or press about European expansion.
+
++3 point: Launching product features involving sensitive data collection
+   Evidence needed: Product launch announcement, feature release, or press about new data collection capabilities.
 
 +2 points: Raised funding in the last 6 months
    Evidence needed: Dated funding announcement found in research. The date matters — funding from 2+ years ago scores 0 here.
 
-+2 points: Expanding into EU/UK (GDPR trigger)
-   Evidence needed: Job posting for EU-based roles, international office announcement, GDPR-related job descriptions, or press about European expansion.
-
-+1 point: Hired or actively hiring Head of Legal, DPO, VP Compliance, or similar
++2 points: Hired or actively hiring Head of Legal, DPO, VP Compliance, or similar
    Evidence needed: Job posting or LinkedIn announcement found in research.
-
-+1 point: New state privacy law affecting them takes effect within 6 months
-   Evidence needed: Evidence they have users in a state with upcoming privacy law deadlines (Texas, Oregon, Montana, etc.).
-
-+1 point: Launching product features involving sensitive data collection
-   Evidence needed: Product launch announcement, feature release, or press about new data collection capabilities.
 
 +1 point: Enterprise deal activity or compliance pressure
    Evidence needed: Job postings mentioning SOC 2 or compliance, press about enterprise customers, or RFP/procurement activity.
 
 === OVERALL SCORE ===
 Calculate as: round((fit_score + timing_score) / 2)
-This means a perfect 10 requires BOTH strong fit AND hot timing. A great fit (8) with no timing (2) = overall 5. This is correct and intentional.
+This means a perfect score requires BOTH strong fit AND hot timing. A great fit (8) with no timing (2) = overall 5. This is correct and intentional.
 
 === CONTACT ROLE FIT ===
 9-10: CEO, CTO, General Counsel, Head of Legal, Chief Privacy Officer, DPO
@@ -376,15 +373,15 @@ Score each checklist item and show your work in fit_score_breakdown and timing_s
 
 Respond with this exact JSON structure:
 {{
-    "fit_score": <0-10>,
+    "fit_score": <0+>,
     "fit_score_breakdown": [
-        {{"criterion": "<what was checked>", "points": <0-2>, "evidence": "<specific evidence or 'NOT MET — reason'>"}}
+        {{"criterion": "<what was checked>", "points": <points for this criterion>, "evidence": "<specific evidence or 'NOT MET — reason'>"}}
     ],
-    "timing_score": <0-10>,
+    "timing_score": <0+>,
     "timing_score_breakdown": [
-        {{"criterion": "<what was checked>", "points": <0-2>, "evidence": "<specific evidence or 'NOT MET — reason'>"}}
+        {{"criterion": "<what was checked>", "points": <points for this criterion>, "evidence": "<specific evidence or 'NOT MET — reason'>"}}
     ],
-    "overall_score": <0-10>,
+    "overall_score": <0+>,
     "contact_role_fit": <1-10>,
     "icp_company_type": "<saas|healthtech|fintech|ecommerce|other>",
     "icp_match_reasons": ["reason1", "reason2"],
@@ -556,14 +553,14 @@ def process_prospect(
     urgency = synthesis.get("urgency_level", "?")
     breach = "🚨 YES" if synthesis.get("breach_flag") else "No"
 
-    print(f"\n   📈 Scores: Fit={fit}/10 | Timing={timing}/10 | Overall={overall}/10")
+    print(f"\n   📈 Scores: Fit={fit} | Timing={timing} | Overall={overall}")
     print(f"   ⏰ Urgency: {urgency}")
     print(f"   🔓 Breach: {breach}")
 
     # Show fit score breakdown
     fit_breakdown = synthesis.get("fit_score_breakdown", [])
     if fit_breakdown:
-        print(f"\n   🎯 Fit Breakdown ({fit}/10):")
+        print(f"\n   🎯 Fit Breakdown (total: {fit}):")
         for item in fit_breakdown:
             pts = item.get("points", 0)
             icon = "✅" if pts > 0 else "❌"
@@ -573,7 +570,7 @@ def process_prospect(
     # Show timing score breakdown
     timing_breakdown = synthesis.get("timing_score_breakdown", [])
     if timing_breakdown:
-        print(f"\n   ⏱️  Timing Breakdown ({timing}/10):")
+        print(f"\n   ⏱️  Timing Breakdown (total: {timing}):")
         for item in timing_breakdown:
             pts = item.get("points", 0)
             icon = "✅" if pts > 0 else "❌"
