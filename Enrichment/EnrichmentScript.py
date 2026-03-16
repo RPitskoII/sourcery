@@ -757,6 +757,7 @@ def interactive_mode(sb: Client, tavily: TavilyClient, claude: anthropic.Anthrop
     # Ask how many to process
     print(f"\nHow many prospects to process?")
     print(f"   1-9   = that many (good for testing)")
+    print(f"   70    = process 70 prospects")
     print(f"   all   = all {pending_count} pending prospects")
     print(f"   q     = quit")
 
@@ -768,11 +769,12 @@ def interactive_mode(sb: Client, tavily: TavilyClient, claude: anthropic.Anthrop
     else:
         try:
             count = int(choice)
-            if count < 1 or count > 9:
-                print("Invalid input. Enter 1-9, 'all', or 'q'.")
+            # Allow 1-9 for quick tests and 70 for a larger batch run
+            if count not in range(1, 10) and count != 70:
+                print("Invalid input. Enter 1-9, '70', 'all', or 'q'.")
                 return
         except ValueError:
-            print("Invalid input. Enter 1-9, 'all', or 'q'.")
+            print("Invalid input. Enter 1-9, '70', 'all', or 'q'.")
             return
 
     # Fetch prospects
