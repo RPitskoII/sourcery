@@ -1,0 +1,95 @@
+{
+  "company": {
+    "name": "Alder & Birch Legal, PLLC",
+    "tagline": "Specialized data privacy counsel for fast-growing technology companies",
+    "website": "https://www.alderbirchlegal.com",
+    "location": "Austin, Texas",
+    "founded": 2019,
+    "size": "10-person boutique firm",
+    "differentiators": [
+      "Attorneys who understand both regulatory landscape and the products clients are building",
+      "Built specifically for fast-growing tech companies who need privacy counsel before they can justify a full-time GC or CPO",
+      "Deep expertise across CCPA, GDPR, HIPAA, SOC 2, COPPA, and the growing patchwork of state privacy laws",
+      "Trusted by venture-backed startups from seed through Series C"
+    ],
+    "services": [
+      {
+        "name": "Privacy Program Buildout",
+        "description": "Designing and implementing privacy infrastructure from scratch — data mapping, privacy policies, cookie consent frameworks, data processing agreements, and internal governance procedures",
+        "typical_engagement": "$15,000–$40,000",
+        "best_for": "Companies that have never formalized their privacy program and need to build one for enterprise sales, fundraising, or regulatory compliance"
+      },
+      {
+        "name": "Regulatory Compliance",
+        "description": "Achieving and maintaining compliance with CCPA/CPRA, GDPR, HIPAA, state privacy laws, and SOC 2 readiness from the legal side",
+        "typical_engagement": "$3,000–$8,000/month retainer",
+        "best_for": "Companies expanding into regulated markets, handling sensitive data, or facing enterprise procurement requirements"
+      },
+      {
+        "name": "Incident Response",
+        "description": "Guiding companies through data breaches — breach assessment, regulatory notification obligations, consumer notifications, and regulatory correspondence",
+        "typical_engagement": "$20,000–$60,000 per incident",
+        "best_for": "Companies that have experienced or narrowly avoided a data breach and need immediate expert guidance"
+      },
+      {
+        "name": "Product Counsel",
+        "description": "Reviewing product features, data flows, and terms of service for privacy risk before launch — consent mechanisms, data retention, third-party sharing, children's privacy, AI/ML training data compliance",
+        "typical_engagement": "$5,000–$15,000 per engagement",
+        "best_for": "Companies launching new features that collect sensitive data or expanding into areas with privacy implications"
+      }
+    ],
+    "ideal_client_profile": {
+      "company_types": ["B2B SaaS", "B2C SaaS", "healthtech", "fintech", "e-commerce"],
+      "employee_range": "25–200",
+      "funding_stage": "Seed through Series C",
+      "geography": "US-based, often expanding internationally",
+      "common_triggers": [
+        "Enterprise buyer requiring SOC 2, DPAs, or published privacy policies",
+        "EU/UK market expansion requiring GDPR compliance",
+        "Recent or narrowly avoided data breach",
+        "New state privacy law taking effect",
+        "Product launch collecting sensitive data",
+        "First Head of Legal or compliance hire auditing existing gaps"
+      ]
+    }
+  },
+  "sender": {
+    "name": "YOUR NAME",
+    "title": "Partner",
+    "email": "your.name@alderbirchlegal.com",
+    "phone": "(512) 555-0100",
+    "linkedin": "https://linkedin.com/in/yourprofile",
+    "bio": "A brief 1-2 sentence bio about the sender's background and expertise that builds credibility — e.g., '10 years advising venture-backed startups on data privacy, previously in-house counsel at a Series C healthtech company.'"
+  },
+  "email_guidelines": {
+    "tone": [
+      "Consultative, not salesy — this is a partner reaching out as a peer, not a cold sales email",
+      "Concise — 4-6 sentences in the body, no walls of text",
+      "Specific — reference something real about the prospect's situation, never generic",
+      "Helpful — offer a concrete insight or observation, not just a meeting request",
+      "Professional but warm — this is a boutique firm, not BigLaw"
+    ],
+    "structure": [
+      "Subject line: Short, specific to the prospect's situation, no clickbait",
+      "Opening: One sentence that references a specific signal or fact about the prospect — this proves the email isn't spray-and-pray",
+      "Bridge: One sentence connecting that signal to a privacy/compliance need they likely have",
+      "Value: One sentence about how Alder & Birch has helped similar companies",
+      "Ask: A low-commitment CTA — typically a 15-minute call, not a sales demo",
+      "Sign-off: Brief, professional"
+    ],
+    "things_to_avoid": [
+      "Never open with 'I hope this email finds you well' or similar filler",
+      "Never list all four service lines — lead with the one most relevant to their situation",
+      "Never mention the automated research or enrichment pipeline",
+      "Never use urgency tactics or false scarcity",
+      "Never include pricing in the cold email",
+      "Never be vague — 'companies like yours' is lazy, name their specific situation",
+      "Never write more than 150 words in the body"
+    ],
+    "example_openings": [
+      "Congrats on the Series B — that's a big milestone. As you scale the team and start closing enterprise deals, procurement teams are going to start asking for SOC 2 reports and DPAs that you probably don't have yet.",
+      "I saw that [Company] is hiring for a Head of Legal — that's usually the point where someone takes a hard look at the company's privacy posture and finds gaps. We work with a lot of companies at exactly this stage.",
+      "I noticed [Company] just launched [feature]. Processing [data type] at scale puts you squarely in HIPAA territory, and the penalties for getting it wrong are significant."
+    ]
+  }
+}

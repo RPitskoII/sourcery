@@ -55,6 +55,26 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 TABLE_NAME = "BulkProspects"
 
+# Minimum overall_score required to draft an outreach email
+EMAIL_DRAFT_MIN_SCORE = 6
+
+
+def _load_prompt_from_file(filename: str, default: str) -> str:
+    """
+    Load a prompt string from a plain text file in the same directory.
+    Falls back to the provided default on any error.
+    """
+    try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(base_dir, filename)
+        if not os.path.exists(path):
+            return default
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        print(f"   ⚠️  Failed to load {filename}: {e}")
+        return default
+
 # ICP pre-filter settings
 MIN_EMPLOYEES = 25
 MAX_EMPLOYEES = 200
@@ -273,139 +293,61 @@ def run_tavily_searches(tavily: TavilyClient, queries: list[dict]) -> list[dict]
 # Claude synthesis
 # ---------------------------------------------------------------------------
 
-SYNTHESIS_SYSTEM_PROMPT = """You are a research analyst for Alder & Birch Legal, PLLC — a boutique data privacy and compliance law firm based in Austin, TX. The firm helps fast-growing tech companies with privacy program buildouts, regulatory compliance (CCPA, GDPR, HIPAA, SOC 2, state privacy laws), incident response, and product counsel.
 
-Your job is to analyze research data about a prospect company and produce a structured enrichment assessment using STRICT, EVIDENCE-BASED scoring. You must earn every point with concrete evidence from the research results or the prospect's existing data. Do NOT assume, infer, or give credit for things not explicitly supported by evidence.
+def _call_claude_with_retry(
+    client: anthropic.Anthropic,
+    *,
+    max_attempts: int = 3,
+    initial_delay: float = 2.0,
+    **kwargs,
+):
+    """
+    Call Claude with simple retry logic for transient overload errors.
 
-CRITICAL SCORING RULES:
-- Every point must be justified by specific evidence. "They are a SaaS company so they probably handle PII" is NOT evidence. You need proof.
-- If Tavily returned nothing relevant for a category, that category scores 0. Do not guess.
-- Most companies should score 4-6 overall. A score of 8+ means multiple strong, concrete, recent signals were found. This should be rare.
-- An absence of evidence is NOT evidence of absence, but it IS a reason to score conservatively.
+    Retries when we detect HTTP 529 or an error payload with type=overloaded_error.
+    """
+    attempt = 0
+    delay = initial_delay
+    while True:
+        attempt += 1
+        try:
+            return client.messages.create(**kwargs)
+        except Exception as e:  # anthropic's errors subclass Exception
+            # Try to detect overloaded / 529 conditions
+            status_code = getattr(e, "status_code", None)
+            body = getattr(e, "body", None)
+            error_type = None
 
-=== FIT SCORE (start at 0, add points with evidence) ===
+            if isinstance(body, dict):
+                # Newer Anthropic SDKs wrap error details like {"type": "...", "error": {...}}
+                if isinstance(body.get("error"), dict):
+                    error_type = body["error"].get("type") or body.get("type")
+                else:
+                    error_type = body.get("type")
 
-+2 points: Company is confirmed SaaS, healthtech, fintech, or e-commerce
-   Evidence needed: Industry classification, product description, or website confirms this. Not just "technology company."
+            is_overloaded = status_code == 529 or error_type == "overloaded_error"
 
-+2 point: Handles sensitive data (health/HIPAA, financial, biometric, children's/COPPA)
-   Evidence needed: Product description, privacy policy, or research explicitly mentions handling these data types. NOT assumed from industry alone.
+            if not is_overloaded or attempt >= max_attempts:
+                print(f"      ❌ Claude call failed (attempt {attempt}/{max_attempts}): {e}")
+                raise
 
-+2 point: No existing privacy counsel or in-house legal team detected
-   Evidence needed: No mention of General Counsel, privacy team, or outside privacy firm found in research. If a legal hire was JUST made, this still counts (they're new and finding gaps).
+            print(
+                f"      ⚠️ Claude overloaded (attempt {attempt}/{max_attempts}, "
+                f"status={status_code}, type={error_type}). Retrying in {delay:.1f}s..."
+            )
+            time.sleep(delay)
+            delay *= 1.5
 
-+1 point: Employee count is 25-200
-   Evidence needed: From prospect data (# Employees field).
 
-+1 point: Raised at least a Seed round
-   Evidence needed: From prospect data (Total Funding, Latest Funding fields) or research confirms funding.
-
-+1 point: B2B with enterprise customers or actively pursuing enterprise sales
-   Evidence needed: Enterprise pricing page, SOC 2 badge on website, case studies with enterprise logos, or job postings mentioning enterprise sales.
-
-+1 point: Product involves collecting/processing user PII at scale
-   Evidence needed: Product description or research shows they collect personal data from end users (not just internal employee data).
-
-+1 point: Company is in active growth phase
-   Evidence needed: Recent job postings, press about expansion, new product launches, or headcount growth found in research.
-
-=== TIMING SCORE (start at 0, add points with evidence) ===
-
-+5 points: Active data breach or recent security incident within the last 3 months
-   Evidence needed: News article, state AG database entry, HHS breach portal, or company disclosure found. Must cite source.
-
-+5 points: New state privacy law affecting them takes effect within 6 months
-   Evidence needed: Evidence they have users in a state with upcoming privacy law deadlines (Texas, Oregon, Montana, etc.).
-
-+3 points: Expanding into EU/UK (GDPR trigger)
-   Evidence needed: Job posting for EU-based roles, international office announcement, GDPR-related job descriptions, or press about European expansion.
-
-+3 point: Launching product features involving sensitive data collection
-   Evidence needed: Product launch announcement, feature release, or press about new data collection capabilities.
-
-+2 points: Raised funding in the last 6 months
-   Evidence needed: Dated funding announcement found in research. The date matters — funding from 2+ years ago scores 0 here.
-
-+2 points: Hired or actively hiring Head of Legal, DPO, VP Compliance, or similar
-   Evidence needed: Job posting or LinkedIn announcement found in research.
-
-+1 point: Enterprise deal activity or compliance pressure
-   Evidence needed: Job postings mentioning SOC 2 or compliance, press about enterprise customers, or RFP/procurement activity.
-
-=== OVERALL SCORE ===
-Calculate as: round((fit_score + timing_score) / 2)
-This means a perfect score requires BOTH strong fit AND hot timing. A great fit (8) with no timing (2) = overall 5. This is correct and intentional.
-
-=== CONTACT ROLE FIT ===
-9-10: CEO, CTO, General Counsel, Head of Legal, Chief Privacy Officer, DPO
-7-8: VP Engineering, VP Product, VP Compliance, COO, CFO
-5-6: Director-level in engineering, product, or operations
-3-4: Manager-level or senior individual contributor
-1-2: Individual contributor, marketing, sales, HR, or unrelated role
-
-=== URGENCY LEVELS ===
-"immediate": Active breach, regulatory deadline within 60 days, or evidence of a deal-blocking compliance gap RIGHT NOW
-"near-term": Trigger event found within the last 3 months (funding, hiring, expansion)
-"future": General ICP fit but no concrete recent trigger event found
-
-You must respond ONLY with valid JSON matching the schema below. No markdown, no explanation outside the JSON."""
-
-SYNTHESIS_USER_TEMPLATE = """Analyze this prospect using the strict checklist scoring rubric. Award points ONLY where you have concrete evidence.
-
-PROSPECT DATA:
-- Company: {company_name}
-- Contact: {first_name} {last_name}, {title}
-- Industry: {industry}
-- Keywords: {keywords}
-- Employees: {employees}
-- Website: {website}
-- Location: {city}, {state}, {country}
-- Total Funding: {total_funding}
-- Latest Funding: {latest_funding}
-- Latest Funding Amount: {latest_funding_amount}
-- Last Raised At: {last_raised}
-- Annual Revenue: {annual_revenue}
-
-RESEARCH RESULTS:
-{research_json}
-
-Score each checklist item and show your work in fit_score_breakdown and timing_score_breakdown. Each entry should state the criterion and whether it was met with what evidence (or "NOT MET — no evidence found").
-
-Respond with this exact JSON structure:
-{{
-    "fit_score": <0+>,
-    "fit_score_breakdown": [
-        {{"criterion": "<what was checked>", "points": <points for this criterion>, "evidence": "<specific evidence or 'NOT MET — reason'>"}}
-    ],
-    "timing_score": <0+>,
-    "timing_score_breakdown": [
-        {{"criterion": "<what was checked>", "points": <points for this criterion>, "evidence": "<specific evidence or 'NOT MET — reason'>"}}
-    ],
-    "overall_score": <0+>,
-    "contact_role_fit": <1-10>,
-    "icp_company_type": "<saas|healthtech|fintech|ecommerce|other>",
-    "icp_match_reasons": ["reason1", "reason2"],
-    "sensitive_data_categories": ["category1", "category2"],
-    "compliance_needs": ["GDPR", "CCPA", "HIPAA", "SOC2", "COPPA", "state_privacy"],
-    "buy_signals": [
-        {{"type": "<signal_type>", "evidence": "<what was found>", "source_url": "<url or null>"}}
-    ],
-    "trigger_events": [
-        {{"type": "<event_type>", "date": "<date or null>", "description": "<what happened>", "source": "<url or null>"}}
-    ],
-    "urgency_level": "<immediate|near-term|future>",
-    "current_privacy_posture": "<assessment of their current privacy stance>",
-    "privacy_gaps": ["gap1", "gap2"],
-    "competitor_signals": [
-        {{"type": "<signal>", "detail": "<what was found>"}}
-    ],
-    "breach_flag": <true|false>,
-    "breach_details": {{"date": "<date or null>", "scope": "<description or null>", "data_types": ["type1"], "source": "<url or null>", "regulatory_status": "<status or null>"}},
-    "risk_factors": ["risk1", "risk2"],
-    "research_summary": "<2-3 paragraph synthesis of the company, their privacy needs, and the opportunity>",
-    "outreach_angle": "<2-3 sentence recommended approach for a partner to use in outreach>",
-    "recommended_contact_approach": "<direct|loop_in_legal|loop_in_cto|loop_in_compliance>"
-}}"""
+# Load prompts from external text files in the same directory
+SYNTHESIS_SYSTEM_PROMPT = _load_prompt_from_file(
+    "synthesis_system_prompt.txt",
+    "SYNTHESIS_SYSTEM_PROMPT missing. Create synthesis_system_prompt.txt next to RubricScoreing.py.",
+)
+SYNTHESIS_USER_TEMPLATE = _load_prompt_from_file(
+    "synthesis_user_template.txt",
+    "SYNTHESIS_USER_TEMPLATE missing. Create synthesis_user_template.txt next to RubricScoreing.py.",
+)
 
 
 def synthesize_with_claude(
@@ -434,7 +376,8 @@ def synthesize_with_claude(
         research_json=json.dumps(research_results, indent=2),
     )
 
-    response = client.messages.create(
+    response = _call_claude_with_retry(
+        client,
         model="claude-sonnet-4-20250514",
         max_tokens=4096,
         system=SYNTHESIS_SYSTEM_PROMPT,
@@ -459,6 +402,140 @@ def synthesize_with_claude(
 
 
 # ---------------------------------------------------------------------------
+# Email drafting with Claude
+# ---------------------------------------------------------------------------
+
+def draft_outreach_email(
+    client: anthropic.Anthropic,
+    prospect: dict,
+    synthesis: dict,
+    company_profile: dict,
+) -> dict:
+    """
+    Draft a personalized outreach email using Claude.
+    Returns {"subject": str, "body": str, "service_line": str} or {"error": ...}.
+    """
+    try:
+        sender = company_profile.get("sender", {})
+        company = company_profile.get("company", {})
+        guidelines = company_profile.get("email_guidelines", {})
+
+        tone_rules = "\n".join(f"- {t}" for t in guidelines.get("tone", []))
+        structure_rules = "\n".join(f"- {s}" for s in guidelines.get("structure", []))
+        avoid_rules = "\n".join(f"- {a}" for a in guidelines.get("things_to_avoid", []))
+        example_openings = "\n".join(f"- {e}" for e in guidelines.get("example_openings", []))
+
+        services = company.get("services", [])
+        services_text_lines = []
+        for s in services:
+            services_text_lines.append(
+                f"- {s.get('name')}: {s.get('description')} "
+                f"(best for: {s.get('best_for')})"
+            )
+        services_text = "\n".join(services_text_lines)
+
+        differentiators = "\n".join(
+            f"- {d}" for d in company.get("differentiators", [])
+        )
+
+        system_prompt = (
+            f"You are writing a cold outreach email on behalf of {sender.get('name', 'a partner')}, "
+            f"{sender.get('title', 'Partner')} at {company.get('name', 'Alder & Birch Legal, PLLC')}.\n\n"
+            f"Sender bio:\n{sender.get('bio', '')}\n\n"
+            "Email tone guidelines:\n"
+            f"{tone_rules}\n\n"
+            "Email structure template:\n"
+            f"{structure_rules}\n\n"
+            "Things to avoid:\n"
+            f"{avoid_rules}\n\n"
+            "Example openings (for style, do not copy verbatim):\n"
+            f"{example_openings}\n\n"
+            "Firm services (service lines):\n"
+            f"{services_text}\n\n"
+            "Firm differentiators:\n"
+            f"{differentiators}\n\n"
+            "Requirements:\n"
+            "- Pick ONE most relevant service line to lead with based on the prospect's signals.\n"
+            "- The body must be plain text (no HTML, no markdown), ready to paste into an email client.\n"
+            "- The body must be at most 150 words (4–6 sentences).\n"
+            "- Do not mention pricing or fees.\n"
+            "- Do not mention any automated research, enrichment pipeline, or AI tools.\n"
+            "- Reference research signals subtly (e.g., 'I noticed you recently raised...' not exact amounts/dates).\n"
+            "- Use the provided outreach_angle as guidance but write the email fresh.\n"
+            'Respond ONLY in valid JSON with this shape (no markdown, no extra text): '
+            '{"subject": "...", "body": "...", "service_line": "..."}'
+        )
+
+        # Build user message with prospect + synthesis context
+        user_payload = {
+            "prospect_name": f"{prospect.get('First Name', '')} {prospect.get('Last Name', '')}".strip(),
+            "prospect_title": prospect.get("Title", ""),
+            "prospect_company": prospect.get("Company Name", ""),
+            "research_summary": synthesis.get("research_summary"),
+            "outreach_angle": synthesis.get("outreach_angle"),
+            "buy_signals": synthesis.get("buy_signals", []),
+            "trigger_events": synthesis.get("trigger_events", []),
+            "urgency_level": synthesis.get("urgency_level"),
+            "compliance_needs": synthesis.get("compliance_needs", []),
+            "sensitive_data_categories": synthesis.get("sensitive_data_categories", []),
+            "privacy_gaps": synthesis.get("privacy_gaps", []),
+            "breach_flag": synthesis.get("breach_flag", False),
+            "contact_role_fit": synthesis.get("contact_role_fit"),
+        }
+
+        user_msg = (
+            "Use the following context to write the email.\n\n"
+            f"CONTEXT (JSON):\n{json.dumps(user_payload, indent=2)}\n"
+        )
+
+        response = _call_claude_with_retry(
+            client,
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+
+        raw_text = response.content[0].text.strip()
+
+        # Clean potential markdown fences
+        if raw_text.startswith("```"):
+            raw_text = raw_text.split("\n", 1)[1] if "\n" in raw_text else raw_text[3:]
+        if raw_text.endswith("```"):
+            raw_text = raw_text[:-3]
+        raw_text = raw_text.strip()
+
+        try:
+            parsed = json.loads(raw_text)
+        except json.JSONDecodeError as e:
+            print(f"      ⚠️  Email JSON parse error: {e}")
+            print(f"      Raw email response (first 500 chars): {raw_text[:500]}")
+            return {"error": f"Email JSON parse failed: {str(e)}", "raw_response": raw_text[:1000]}
+
+        # Normalize keys
+        subject = parsed.get("subject")
+        body = parsed.get("body")
+        service_line = parsed.get("service_line")
+
+        if not subject or not body or not service_line:
+            return {
+                "error": "Email response missing required fields",
+                "raw_response": raw_text[:1000],
+            }
+
+        # Brief pause to respect rate limits (separate from Tavily)
+        time.sleep(0.3)
+
+        return {
+            "subject": subject,
+            "body": body,
+            "service_line": service_line,
+        }
+    except Exception as e:
+        return {"error": f"Email drafting failed: {str(e)}"}
+
+
+# ---------------------------------------------------------------------------
 # Pipeline orchestration
 # ---------------------------------------------------------------------------
 
@@ -469,6 +546,7 @@ def process_prospect(
     sb: Client,
     dry_run: bool = False,
     status_col: Optional[str] = None,
+    company_profile: Optional[dict] = None,
 ) -> dict:
     """Run the full enrichment pipeline for a single prospect."""
     if status_col is None:
@@ -519,7 +597,23 @@ def process_prospect(
             }).eq("Primary", pk).execute()
         return {"status": "error", "error": synthesis["error"]}
 
-    # Step 4: Write back to Supabase
+    # Step 4: Optional email drafting (for high-scoring prospects)
+    email_subject = None
+    email_body = None
+    email_service_line = None
+
+    overall_score = synthesis.get("overall_score")
+    if company_profile is not None and isinstance(overall_score, (int, float)) and overall_score >= EMAIL_DRAFT_MIN_SCORE:
+        print("   ✉️  Drafting outreach email...")
+        email_result = draft_outreach_email(claude, prospect, synthesis, company_profile)
+        if "error" in email_result:
+            print(f"      ⚠️  Email drafting failed: {email_result['error']}")
+        else:
+            email_subject = email_result.get("subject")
+            email_body = email_result.get("body")
+            email_service_line = email_result.get("service_line")
+
+    # Step 5: Write back to Supabase
     enrichment = {
         "fit_score": synthesis.get("fit_score"),
         "fit_score_breakdown": json.dumps(synthesis.get("fit_score_breakdown", [])),
@@ -544,6 +638,9 @@ def process_prospect(
         "outreach_angle": synthesis.get("outreach_angle"),
         "recommended_contact_approach": synthesis.get("recommended_contact_approach"),
         "raw_research": json.dumps(research_results),
+        "email_draft_subject": email_subject,
+        "email_draft_body": email_body,
+        "email_draft_service_line": email_service_line,
     }
 
     # Print summary
@@ -582,6 +679,14 @@ def process_prospect(
     for line in _wrap_text(angle, 55):
         print(f"      {line}")
 
+    # Print email draft preview (if available)
+    if email_subject and email_body:
+        print(f"\n   ✉️  Email Draft Subject: {email_subject}")
+        preview = (email_body[:100] + "...") if len(email_body) > 100 else email_body
+        print("   ✉️  Email Draft Preview:")
+        for line in _wrap_text(preview, 70):
+            print(f"      {line}")
+
     if not dry_run:
         write_enrichment(sb, pk, enrichment, status_col=status_col)
         print(f"\n   ✅ Written to Supabase.")
@@ -613,13 +718,13 @@ def _wrap_text(text: str, width: int) -> list[str]:
 def print_banner():
     print("""
 ╔══════════════════════════════════════════════════════════════╗
-║     ALDER & BIRCH — Rubric Scoring Enrichment Pipeline      ║
+║     ALDER & BIRCH — Rubric Scoring Enrichment Pipeline       ║
 ║              Tavily + Claude (strict rubric)                 ║
 ╚══════════════════════════════════════════════════════════════╝
     """)
 
 
-def interactive_mode(sb: Client, tavily: TavilyClient, claude: anthropic.Anthropic):
+def interactive_mode(sb: Client, tavily: TavilyClient, claude: anthropic.Anthropic, company_profile: Optional[dict] = None):
     """Interactive CLI for running the pipeline."""
     print_banner()
 
@@ -684,7 +789,7 @@ def interactive_mode(sb: Client, tavily: TavilyClient, claude: anthropic.Anthrop
 
     for i, prospect in enumerate(prospects, 1):
         print(f"\n[{i}/{len(prospects)}]", end="")
-        result = process_prospect(prospect, tavily, claude, sb, status_col=status_col)
+        result = process_prospect(prospect, tavily, claude, sb, status_col=status_col, company_profile=company_profile)
         stats[result["status"]] = stats.get(result["status"], 0) + 1
 
         if i < len(prospects):
@@ -736,13 +841,26 @@ def main():
     tavily = TavilyClient(api_key=TAVILY_API_KEY)
     claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
+    # Load company profile for email drafting (optional)
+    company_profile = None
+    try:
+        profile_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "company_profile.json")
+        if os.path.exists(profile_path):
+            with open(profile_path, "r", encoding="utf-8") as f:
+                company_profile = json.load(f)
+        else:
+            print("   ⚠️  company_profile.json not found. Email drafting will be skipped.")
+    except Exception as e:
+        print(f"   ⚠️  Failed to load company_profile.json: {e}")
+        company_profile = None
+
     if args.prospect_id:
         # Single prospect mode
         prospects = fetch_prospects(sb, prospect_id=args.prospect_id)
         if not prospects:
             print(f"❌ No prospect found with Primary = {args.prospect_id}")
             return
-        process_prospect(prospects[0], tavily, claude, sb, dry_run=args.dry_run)
+        process_prospect(prospects[0], tavily, claude, sb, dry_run=args.dry_run, company_profile=company_profile)
     elif args.count:
         # Batch mode from CLI
         count = None if args.count == "all" else int(args.count)
@@ -750,12 +868,12 @@ def main():
         print(f"🎯 Processing {len(prospects)} prospects...")
         for i, p in enumerate(prospects, 1):
             print(f"\n[{i}/{len(prospects)}]", end="")
-            process_prospect(p, tavily, claude, sb, dry_run=args.dry_run)
+            process_prospect(p, tavily, claude, sb, dry_run=args.dry_run, company_profile=company_profile)
             if i < len(prospects):
                 time.sleep(1)
     else:
         # Interactive mode
-        interactive_mode(sb, tavily, claude)
+        interactive_mode(sb, tavily, claude, company_profile=company_profile)
 
 
 if __name__ == "__main__":

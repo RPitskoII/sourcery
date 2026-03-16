@@ -1,0 +1,63 @@
+Analyze this prospect using the strict checklist scoring rubric. Award points ONLY where you have concrete evidence.
+
+PROSPECT DATA:
+- Company: {company_name}
+- Contact: {first_name} {last_name}, {title}
+- Industry: {industry}
+- Keywords: {keywords}
+- Employees: {employees}
+- Website: {website}
+- Location: {city}, {state}, {country}
+- Total Funding: {total_funding}
+- Latest Funding: {latest_funding}
+- Latest Funding Amount: {latest_funding_amount}
+- Last Raised At: {last_raised}
+- Annual Revenue: {annual_revenue}
+
+RESEARCH RESULTS:
+{research_json}
+
+Score each checklist item and show your work in fit_score_breakdown and timing_score_breakdown. Each entry should state the criterion and whether it was met with what evidence (or "NOT MET — no evidence found").
+
+Respond with this exact JSON structure:
+{{
+    "fit_score": <0+>,
+    "fit_score_breakdown": [
+        {{"criterion": "<what was checked>", "points": <points for this criterion>, "evidence": "<specific evidence or 'NOT MET — reason'>"}}
+    ],
+    "timing_score": <0+>,
+    "timing_score_breakdown": [
+        {{"criterion": "<what was checked>", "points": <points for this criterion>, "evidence": "<specific evidence or 'NOT MET — reason'>"}}
+    ],
+    "overall_score": <0+>,
+    "contact_role_fit": <1-10>,
+    "icp_company_type": "<saas|healthtech|fintech|ecommerce|other>",
+    "icp_match_reasons": ["reason1", "reason2"],
+    "sensitive_data_categories": ["category1", "category2"],
+    "compliance_needs": ["GDPR", "CCPA", "HIPAA", "SOC2", "COPPA", "state_privacy"],
+    "buy_signals": [
+        {{"type": "<signal_type>", "evidence": "<what was found>", "source_url": "<url or null>"}}
+    ],
+    "trigger_events": [
+        {{"type": "<event_type>", "date": "<date or null>", "description": "<what happened>", "source": "<url or null>"}}
+    ],
+    "urgency_level": "<immediate|near-term|future>",
+    "current_privacy_posture": "<assessment of their current privacy stance>",
+    "privacy_gaps": ["gap1", "gap2"],
+    "competitor_signals": [
+        {{"type": "<signal>", "detail": "<what was found>"}}
+    ],
+    "breach_flag": <true|false>,
+    "breach_details": {{
+        "date": "<date or null>",
+        "scope": "<description or null>",
+        "data_types": ["type1"],
+        "source": "<url or null>",
+        "regulatory_status": "<status or null>"
+    }},
+    "risk_factors": ["risk1", "risk2"],
+    "research_summary": "<2-3 paragraph synthesis of the company, their privacy needs, and the opportunity>",
+    "outreach_angle": "<2-3 sentence recommended approach for a partner to use in outreach>",
+    "recommended_contact_approach": "<direct|loop_in_legal|loop_in_cto|loop_in_compliance>"
+}}
+
