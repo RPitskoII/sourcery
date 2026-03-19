@@ -8,6 +8,10 @@ import { LeadCard } from "./LeadCard";
 interface LeadListPanelProps {
   leads: LeadWithActivity[];
   freshLeads: LeadWithActivity[];
+  freshLeadStatusOverrides: Record<
+    number,
+    { statusText: string; sentSeq: number }
+  >;
   selectedKey: number | null;
   selectedSource: LeadSource | null;
   onSelectLead: (key: number, source: LeadSource) => void;
@@ -19,6 +23,7 @@ interface LeadListPanelProps {
 export function LeadListPanel({
   leads,
   freshLeads,
+  freshLeadStatusOverrides,
   selectedKey,
   selectedSource,
   onSelectLead,
@@ -57,6 +62,37 @@ export function LeadListPanel({
     onFilteredCountChange?.(filtered.length);
   }, [filtered.length, onFilteredCountChange]);
 
+  const displayFreshLeads = useMemo(() => {
+    const indexByPrimary = new Map<number, number>(
+      freshLeads.map((l, i) => [l.Primary, i])
+    );
+
+    function getSentSeq(leadKey: number): number | null {
+      const ov = freshLeadStatusOverrides[leadKey];
+      return ov ? ov.sentSeq : null;
+    }
+
+    function isSent(leadKey: number): boolean {
+      return freshLeadStatusOverrides[leadKey] != null;
+    }
+
+    // Demo behavior: once a FreshLead is "sent", move it to the bottom.
+    // - unsent: preserve original FreshLeads ordering
+    // - sent: order by when it was sent
+    return [...freshLeads].sort((a, b) => {
+      const aSent = isSent(a.Primary);
+      const bSent = isSent(b.Primary);
+
+      if (aSent !== bSent) return aSent ? 1 : -1;
+      if (!aSent) {
+        return (indexByPrimary.get(a.Primary) ?? 0) -
+          (indexByPrimary.get(b.Primary) ?? 0);
+      }
+
+      return (getSentSeq(a.Primary) ?? 0) - (getSentSeq(b.Primary) ?? 0);
+    });
+  }, [freshLeads, freshLeadStatusOverrides]);
+
   return (
     <div className="lead-list-panel">
       <ListFilters
@@ -64,15 +100,21 @@ export function LeadListPanel({
         onSearchChange={onSearchChange}
       />
       <div className="lead-list-scroll">
-        {freshLeads.length > 0 && (
+        {displayFreshLeads.length > 0 && (
           <div className="lead-list-section lead-list-section-new">
             <h3 className="lead-list-section-title">New leads</h3>
-            {freshLeads.map((lead) => (
+            {displayFreshLeads.map((lead) => (
               <LeadCard
                 key={`fresh-${lead.Primary}`}
                 lead={lead}
                 selected={selectedSource === "fresh" && selectedKey === lead.Primary}
                 onClick={() => onSelectLead(lead.Primary, "fresh")}
+                statusOverrideText={
+                  freshLeadStatusOverrides[lead.Primary]?.statusText ?? undefined
+                }
+                statusOverrideClass={
+                  freshLeadStatusOverrides[lead.Primary] ? "status-order-2-3" : undefined
+                }
               />
             ))}
           </div>

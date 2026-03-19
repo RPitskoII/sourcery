@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import type { LeadWithActivity } from "../../types/leads";
 import type { LeadSource } from "../../types/leads";
 import { CompanyHeader } from "./CompanyHeader";
-import { StatusControls } from "./StatusControls";
 import { OutreachAngle } from "./OutreachAngle";
 import { EmailDraft } from "./EmailDraft";
 import { ResearchSummary } from "./ResearchSummary";
@@ -34,12 +33,15 @@ function getOrderBadgeClass(order: number | null): string {
   if (order === 1) return "status-order-1";
   if (order === 2 || order === 3) return "status-order-2-3";
   if (order === 4) return "status-order-4";
+  if (order === 7) return "status-order-7";
   return "status-order-default";
 }
 
 interface LeadDetailPanelProps {
   lead: LeadWithActivity | null;
   selectedSource: LeadSource | null;
+  freshLeadStatusOverrides: Record<number, { statusText: string; sentSeq: number }>;
+  onSetFreshLeadStatusOverride: (leadKey: number, statusText: string) => void;
   onSaveActivity: (leadKey: number, payload: ActivityPayload) => Promise<void>;
   onSaveNotes: (leadKey: number, notes: string) => Promise<void>;
 }
@@ -54,6 +56,8 @@ function scoreColor(score: number | null | undefined): string {
 export function LeadDetailPanel({
   lead,
   selectedSource,
+  freshLeadStatusOverrides,
+  onSetFreshLeadStatusOverride,
   onSaveActivity,
   onSaveNotes,
 }: LeadDetailPanelProps) {
@@ -78,6 +82,7 @@ export function LeadDetailPanel({
     (lead.email_draft_body != null && lead.email_draft_body.trim() !== "");
 
   const isInPipe = selectedSource === "inpipe";
+  const isFresh = selectedSource === "fresh";
   const [inpipeTab, setInpipeTab] = useState<"contact" | "research" | "calendar">(
     "contact"
   );
@@ -86,6 +91,18 @@ export function LeadDetailPanel({
   );
   const order = getOrderValue(lead.order);
   const statusClass = getOrderBadgeClass(order);
+  const freshStatusOverrideText = isFresh
+    ? freshLeadStatusOverrides[lead.Primary]?.statusText ?? null
+    : null;
+
+  const freshStatusText = freshStatusOverrideText
+    ? freshStatusOverrideText
+    : lead.status
+      ? String(lead.status)
+      : "N/A";
+  const freshStatusClass = freshStatusOverrideText
+    ? "status-order-2-3"
+    : statusClass;
 
   useEffect(() => {
     setInpipeTab("contact");
@@ -191,27 +208,94 @@ export function LeadDetailPanel({
           </>
         ) : (
           <>
-            <StatusControls
-              activity={lead.activity ?? null}
-              onSave={handleSaveActivity}
-            />
-            <OutreachAngle text={lead.outreach_angle ?? null} />
-            <EmailDraft
-              subject={lead.email_draft_subject ?? null}
-              body={lead.email_draft_body ?? null}
-              serviceLine={lead.email_draft_service_line ?? null}
-              hasDraft={hasEmailDraft}
-            />
-            <ResearchSummary text={lead.research_summary ?? null} />
-            <BuySignals signals={lead.buy_signals ?? null} />
-            <TriggerEvents events={lead.trigger_events ?? null} />
-            <ScoreBreakdown
-              fitScore={lead.fit_score}
-              timingScore={lead.timing_score}
-              fitBreakdown={lead.fit_score_breakdown ?? null}
-              timingBreakdown={lead.timing_score_breakdown ?? null}
-            />
-            <ComplianceDetails lead={lead} />
+            <div className="inpipe-status-bar">
+              <span className="inpipe-status-label">Status</span>
+              <span className={`status-badge ${freshStatusClass}`}>
+                {freshStatusText}
+              </span>
+            </div>
+
+            <div
+              className="inpipe-menu"
+              role="tablist"
+              aria-label="Contact vs research"
+            >
+              <button
+                type="button"
+                className={`inpipe-menu-btn ${
+                  inpipeTab === "contact" ? "inpipe-menu-btn-active" : ""
+                }`}
+                onClick={() => setInpipeTab("contact")}
+                role="tab"
+                aria-selected={inpipeTab === "contact"}
+              >
+                Contact
+              </button>
+              <button
+                type="button"
+                className={`inpipe-menu-btn ${
+                  inpipeTab === "research" ? "inpipe-menu-btn-active" : ""
+                }`}
+                onClick={() => setInpipeTab("research")}
+                role="tab"
+                aria-selected={inpipeTab === "research"}
+              >
+                Research
+              </button>
+              <button
+                type="button"
+                className={`inpipe-menu-btn ${
+                  inpipeTab === "calendar" ? "inpipe-menu-btn-active" : ""
+                }`}
+                onClick={() => setInpipeTab("calendar")}
+                role="tab"
+                aria-selected={inpipeTab === "calendar"}
+              >
+                Calendar
+              </button>
+            </div>
+
+            {inpipeTab === "contact" ? (
+              <EmailDraft
+                subject={lead.email_draft_subject ?? null}
+                body={lead.email_draft_body ?? null}
+                serviceLine={lead.email_draft_service_line ?? null}
+                hasDraft={hasEmailDraft}
+                onSend={() =>
+                  onSetFreshLeadStatusOverride(
+                    lead.Primary,
+                    "Waiting, Sent Thu 3/19"
+                  )
+                }
+              />
+            ) : inpipeTab === "calendar" ? (
+              <CalendarMarch2026 highlightPartifulDemoCall={order === 1} />
+            ) : (
+              <>
+                <div className="research-score-row">
+                  <span className={`score-badge score-${scoreColor(lead.fit_score)}`}>
+                    Fit {lead.fit_score ?? "—"}/10
+                  </span>
+                  <span className={`score-badge score-${scoreColor(lead.timing_score)}`}>
+                    Timing {lead.timing_score ?? "—"}/10
+                  </span>
+                  <span className={`score-badge score-${scoreColor(lead.overall_score)}`}>
+                    Overall {lead.overall_score ?? "—"}/10
+                  </span>
+                </div>
+                <ResearchSummary text={lead.research_summary ?? null} />
+                <OutreachAngle text={lead.outreach_angle ?? null} />
+                <BuySignals signals={lead.buy_signals ?? null} />
+                <TriggerEvents events={lead.trigger_events ?? null} />
+                <ScoreBreakdown
+                  fitScore={lead.fit_score}
+                  timingScore={lead.timing_score}
+                  fitBreakdown={lead.fit_score_breakdown ?? null}
+                  timingBreakdown={lead.timing_score_breakdown ?? null}
+                />
+                <ComplianceDetails lead={lead} />
+              </>
+            )}
           </>
         )}
 

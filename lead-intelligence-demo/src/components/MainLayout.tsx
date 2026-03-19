@@ -6,9 +6,11 @@ import type { LeadSource } from "../types/leads";
 interface MainLayoutProps {
   leads: LeadWithActivity[];
   freshLeads: LeadWithActivity[];
+  freshLeadStatusOverrides: Record<number, { statusText: string; sentSeq: number }>;
   selectedKey: number | null;
   selectedSource: LeadSource | null;
   onSelectLead: (key: number, source: LeadSource) => void;
+  onSetFreshLeadStatusOverride: (leadKey: number, statusText: string) => void;
   search: string;
   onSearchChange: (v: string) => void;
   onSaveActivity: (leadKey: number, payload: Record<string, unknown>) => Promise<void>;
@@ -21,9 +23,11 @@ interface MainLayoutProps {
 export function MainLayout({
   leads,
   freshLeads,
+  freshLeadStatusOverrides,
   selectedKey,
   selectedSource,
   onSelectLead,
+  onSetFreshLeadStatusOverride,
   search,
   onSearchChange,
   onSaveActivity,
@@ -48,6 +52,7 @@ export function MainLayout({
           <LeadListPanel
             leads={leads}
             freshLeads={freshLeads}
+            freshLeadStatusOverrides={freshLeadStatusOverrides}
             selectedKey={selectedKey}
             selectedSource={selectedSource}
             onSelectLead={onSelectLead}
@@ -61,6 +66,8 @@ export function MainLayout({
         <LeadDetailPanel
           lead={selectedLead}
           selectedSource={selectedSource}
+          freshLeadStatusOverrides={freshLeadStatusOverrides}
+          onSetFreshLeadStatusOverride={onSetFreshLeadStatusOverride}
           onSaveActivity={onSaveActivity}
           onSaveNotes={onSaveNotes}
         />

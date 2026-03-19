@@ -46,6 +46,7 @@ export function GetLeadsModal({ onConfirm }: GetLeadsModalProps) {
             {loading ? "Loading…" : "Get leads"}
           </button>
         </div>
+        <div className="get-leads-modal-estimate">Estimated time: 50 minutes</div>
       </div>
     </div>
   );

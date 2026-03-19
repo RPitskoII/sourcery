@@ -5,9 +5,16 @@ interface EmailDraftProps {
   body: string | null;
   serviceLine: string | null;
   hasDraft: boolean;
+  onSend?: () => void;
 }
 
-export function EmailDraft({ subject, body, serviceLine, hasDraft }: EmailDraftProps) {
+export function EmailDraft({
+  subject,
+  body,
+  serviceLine,
+  hasDraft,
+  onSend,
+}: EmailDraftProps) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -15,10 +22,19 @@ export function EmailDraft({ subject, body, serviceLine, hasDraft }: EmailDraftP
     const b = body != null ? String(body) : "";
     if (!s && !b) return;
     const text = `Subject: ${s}\n\n${b}`;
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    // Demo behavior: trigger UI updates immediately (no Supabase writes).
+    onSend?.();
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        // Still mark it as "Ready" for the demo even if clipboard access is blocked.
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
   }
 
   if (!hasDraft) {
@@ -51,9 +67,9 @@ export function EmailDraft({ subject, body, serviceLine, hasDraft }: EmailDraftP
         type="button"
         className="btn-copy"
         onClick={handleCopy}
-        aria-label="Copy email to clipboard"
+        aria-label="Send email"
       >
-        {copied ? "Copied" : "Copy email"}
+        {copied ? "Ready" : "Send email"}
       </button>
     </div>
   );

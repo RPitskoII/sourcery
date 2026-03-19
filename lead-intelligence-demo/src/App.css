@@ -153,6 +153,13 @@
   opacity: 0.9;
 }
 
+.get-leads-modal-estimate {
+  margin-top: 14px;
+  font-size: 0.85rem;
+  color: #666;
+  text-align: right;
+}
+
 .main-layout {
   flex: 1;
   display: flex;
@@ -400,6 +407,12 @@
   background: #f9fafb;
   color: #374151;
   border-color: #d1d5db;
+}
+
+.status-order-7 {
+  background: #ffedd5;
+  color: #9a3412;
+  border-color: #fdba74;
 }
 
 .status-order-default {

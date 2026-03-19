@@ -4,6 +4,8 @@ interface LeadCardProps {
   lead: LeadWithActivity;
   selected: boolean;
   onClick: () => void;
+  statusOverrideText?: string;
+  statusOverrideClass?: string;
 }
 
 function getOrderValue(lead: LeadWithActivity): number | null {
@@ -19,10 +21,17 @@ function getOrderBadgeClass(order: number | null): string {
   if (order === 1) return "status-order-1";
   if (order === 2 || order === 3) return "status-order-2-3";
   if (order === 4) return "status-order-4";
+  if (order === 7) return "status-order-7";
   return "status-order-default";
 }
 
-export function LeadCard({ lead, selected, onClick }: LeadCardProps) {
+export function LeadCard({
+  lead,
+  selected,
+  onClick,
+  statusOverrideText,
+  statusOverrideClass,
+}: LeadCardProps) {
   const name = [lead["First Name"], lead["Last Name"]].filter(Boolean).join(" ") || "—";
   const company = lead["Company Name"] ?? "—";
   const title = lead["Title"] ?? "";
@@ -32,6 +41,8 @@ export function LeadCard({ lead, selected, onClick }: LeadCardProps) {
   const nextActionDate = lead.activity?.next_action_date;
   const meetingDate = lead.activity?.meeting_date;
   const contactTopLine = title ? `${name} · ${title}` : name;
+  const displayStatus = statusOverrideText ?? status;
+  const displayStatusClass = statusOverrideClass ?? statusClass;
 
   return (
     <button
@@ -47,8 +58,8 @@ export function LeadCard({ lead, selected, onClick }: LeadCardProps) {
       </div>
       <div className="lead-card-status-row">
         <span className="lead-card-status-label">Status</span>
-        <span className={`status-badge ${statusClass}`}>
-          {status.replace(/_/g, " ")}
+        <span className={`status-badge ${displayStatusClass}`}>
+          {displayStatus.replace(/_/g, " ")}
         </span>
       </div>
       {(nextActionDate || (status === "meeting_scheduled" && meetingDate)) && (
