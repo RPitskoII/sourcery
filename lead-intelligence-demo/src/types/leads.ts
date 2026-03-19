@@ -47,6 +47,14 @@ export interface BulkProspect {
   email_draft_body?: string | null;
   email_draft_service_line?: string | null;
   enriched_at?: string | null;
+  status?: string | null;
+  order?: number | string | null;
+
+  // Demo-only hypothetical email thread fields on InPipe.
+  // email2/email3/email4 represent an alternating back-and-forth sequence.
+  email2?: string | null;
+  email3?: string | null;
+  email4?: string | null;
 }
 
 export interface BuySignal {

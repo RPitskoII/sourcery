@@ -4,7 +4,7 @@ import { Footer } from "./components/Footer";
 import { MainLayout } from "./components/MainLayout";
 import { GetLeadsModal } from "./components/GetLeadsModal";
 import { useLeads } from "./hooks/useLeads";
-import type { LeadStatus, LeadSource, LeadWithActivity } from "./types/leads";
+import type { LeadSource, LeadWithActivity } from "./types/leads";
 import "./App.css";
 
 export default function App() {
@@ -24,11 +24,6 @@ export default function App() {
   const [selectedKey, setSelectedKey] = useState<number | null>(null);
   const [selectedSource, setSelectedSource] = useState<LeadSource | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
-  const [minScore, setMinScore] = useState(0);
-  const [urgencyFilter, setUrgencyFilter] = useState<
-    "all" | "immediate" | "immediate_near"
-  >("all");
   const [filteredCount, setFilteredCount] = useState(0);
 
   const handleGetLeadsConfirm = useCallback(async () => {
@@ -79,12 +74,6 @@ export default function App() {
         onSelectLead={handleSelectLead}
         search={search}
         onSearchChange={setSearch}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        minScore={minScore}
-        onMinScoreChange={setMinScore}
-        urgencyFilter={urgencyFilter}
-        onUrgencyFilterChange={setUrgencyFilter}
         onSaveActivity={handleSaveActivity}
         onSaveNotes={handleSaveNotes}
         onFilteredCountChange={setFilteredCount}

@@ -200,9 +200,7 @@
 .list-filters {
   flex-shrink: 0;
   padding: 12px 16px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: block;
   border-bottom: 1px solid #e0e0e0;
   background: #fafafa;
 }
@@ -219,6 +217,11 @@
 .filter-input {
   min-width: 160px;
   flex: 1;
+}
+
+.filter-input-full {
+  width: 100%;
+  min-width: 0;
 }
 
 .filter-label {
@@ -285,15 +288,36 @@
 }
 
 .lead-card-company {
-  font-weight: 600;
-  font-size: 0.9375rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   margin-bottom: 4px;
 }
 
-.lead-card-contact {
+.lead-card-company-name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.lead-card-company-contact {
   font-size: 0.8125rem;
   color: #555;
+}
+
+.lead-card-status-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 6px;
+}
+
+.lead-card-status-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1E2761;
 }
 
 .lead-card-meta {
@@ -357,6 +381,31 @@
   background: #e5e7eb;
   color: #374151;
   border-radius: 2px;
+  border: 1px solid transparent;
+}
+
+.status-order-1 {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.status-order-2-3 {
+  background: #dbeafe;
+  color: #1e3a8a;
+  border-color: #93c5fd;
+}
+
+.status-order-4 {
+  background: #f9fafb;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.status-order-default {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #d1d5db;
 }
 
 .breach-indicator {
@@ -807,4 +856,259 @@
   color: #666;
   display: flex;
   justify-content: space-between;
+}
+
+/* InPipe email thread */
+.email-thread {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 2px;
+  padding: 14px 14px 10px;
+}
+
+.next-email-section {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 2px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.next-email-title {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1E2761;
+}
+
+.next-email-textarea {
+  width: 100%;
+  border: 1px solid #d0d0d0;
+  border-radius: 2px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.email-thread-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1E2761;
+}
+
+.email-thread-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.email-thread-msg {
+  max-width: 85%;
+  padding: 10px 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+}
+
+.email-thread-msg-you {
+  align-self: flex-end;
+  background: #e8eef9;
+  border-color: #c5d4f0;
+}
+
+.email-thread-msg-prospect {
+  align-self: flex-start;
+  background: #fff;
+}
+
+.email-thread-from {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #1E2761;
+  margin-bottom: 6px;
+}
+
+.email-thread-body {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  color: #1a1a1a;
+}
+
+/* AI research dropdown wrapper (used for InPipe right-pane) */
+.ai-details-dropdown {
+  margin-top: 16px;
+}
+
+.ai-details-dropdown-toggle {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e5e5;
+  background: #fff;
+  border-radius: 2px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  color: #1E2761;
+  text-align: left;
+}
+
+.ai-details-dropdown-toggle:hover {
+  background: #f5f5f5;
+}
+
+.ai-details-dropdown-content {
+  margin-top: 10px;
+}
+
+/* InPipe menu tabs */
+.inpipe-menu {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0 16px;
+}
+
+.inpipe-menu-btn {
+  padding: 10px 14px;
+  border: 1px solid #d0d0d0;
+  border-radius: 2px;
+  background: #fff;
+  font: inherit;
+  font-weight: 700;
+  color: #374151;
+  cursor: pointer;
+}
+
+.inpipe-menu-btn:hover {
+  background: #f5f5f5;
+  border-color: #b0b0b0;
+}
+
+.inpipe-menu-btn-active {
+  background: #1E2761;
+  border-color: #1E2761;
+  color: #fff;
+}
+
+.inpipe-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 2px;
+  background: #fff;
+}
+
+.inpipe-status-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1E2761;
+}
+
+.inpipe-status-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.research-score-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+/* Static calendar (March 2026) */
+.calendar-march-2026 {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.calendar-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1E2761;
+}
+
+.calendar-subtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.calendar-weekday {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1E2761;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 6px;
+}
+
+.calendar-cell {
+  min-height: 78px;
+  border: 1px solid #e5e5e5;
+  border-radius: 3px;
+  padding: 6px;
+  background: #fafafa;
+}
+
+.calendar-cell-partiful {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.calendar-cell-partiful .calendar-day,
+.calendar-cell-partiful .calendar-event {
+  color: #166534;
+}
+
+.calendar-cell-blank {
+  background: #f3f4f6;
+}
+
+.calendar-day {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.calendar-events {
+  margin: 0;
+  padding-left: 14px;
+}
+
+.calendar-event {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: #1a1a1a;
+}
+
+.calendar-no-events {
+  font-size: 0.72rem;
+  color: #9ca3af;
 }

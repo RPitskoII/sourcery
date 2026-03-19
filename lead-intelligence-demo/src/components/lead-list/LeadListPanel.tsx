@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from "react";
 import type { LeadWithActivity } from "../../types/leads";
-import type { LeadStatus, LeadSource } from "../../types/leads";
+import type { LeadSource } from "../../types/leads";
 import { sortLeadsForDemo } from "../../utils/sortLeads";
 import { ListFilters } from "./ListFilters";
 import { LeadCard } from "./LeadCard";
@@ -13,12 +13,6 @@ interface LeadListPanelProps {
   onSelectLead: (key: number, source: LeadSource) => void;
   search: string;
   onSearchChange: (v: string) => void;
-  statusFilter: LeadStatus | "all";
-  onStatusFilterChange: (v: LeadStatus | "all") => void;
-  minScore: number;
-  onMinScoreChange: (v: number) => void;
-  urgencyFilter: "all" | "immediate" | "immediate_near";
-  onUrgencyFilterChange: (v: "all" | "immediate" | "immediate_near") => void;
   onFilteredCountChange?: (count: number) => void;
 }
 
@@ -30,15 +24,19 @@ export function LeadListPanel({
   onSelectLead,
   search,
   onSearchChange,
-  statusFilter,
-  onStatusFilterChange,
-  minScore,
-  onMinScoreChange,
-  urgencyFilter,
-  onUrgencyFilterChange,
   onFilteredCountChange,
 }: LeadListPanelProps) {
   const filtered = useMemo(() => {
+    function getOrderValue(lead: LeadWithActivity): number {
+      const raw = lead.order;
+      if (typeof raw === "number") return raw;
+      if (typeof raw === "string" && raw.trim() !== "") {
+        const parsed = Number(raw);
+        return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+      }
+      return Number.POSITIVE_INFINITY;
+    }
+
     let list = leads;
 
     if (search.trim()) {
@@ -51,28 +49,9 @@ export function LeadListPanel({
       );
     }
 
-    if (statusFilter !== "all") {
-      list = list.filter((l) => (l.activity?.status ?? "new") === statusFilter);
-    }
-
-    list = list.filter((l) => (l.overall_score ?? 0) >= minScore);
-
-    if (urgencyFilter === "immediate") {
-      list = list.filter((l) => l.urgency_level === "immediate");
-    } else if (urgencyFilter === "immediate_near") {
-      list = list.filter(
-        (l) => l.urgency_level === "immediate" || l.urgency_level === "near-term"
-      );
-    }
-
-    return sortLeadsForDemo(list);
-  }, [
-    leads,
-    search,
-    statusFilter,
-    minScore,
-    urgencyFilter,
-  ]);
+    const prioritized = sortLeadsForDemo(list);
+    return [...prioritized].sort((a, b) => getOrderValue(a) - getOrderValue(b));
+  }, [leads, search]);
 
   useEffect(() => {
     onFilteredCountChange?.(filtered.length);
@@ -83,12 +62,6 @@ export function LeadListPanel({
       <ListFilters
         search={search}
         onSearchChange={onSearchChange}
-        statusFilter={statusFilter}
-        onStatusFilterChange={onStatusFilterChange}
-        minScore={minScore}
-        onMinScoreChange={onMinScoreChange}
-        urgencyFilter={urgencyFilter}
-        onUrgencyFilterChange={onUrgencyFilterChange}
       />
       <div className="lead-list-scroll">
         {freshLeads.length > 0 && (

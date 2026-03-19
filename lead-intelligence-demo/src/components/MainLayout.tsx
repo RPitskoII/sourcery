@@ -1,7 +1,6 @@
 import { LeadListPanel } from "./lead-list/LeadListPanel";
 import { LeadDetailPanel } from "./lead-detail/LeadDetailPanel";
 import type { LeadWithActivity } from "../types/leads";
-import type { LeadStatus } from "../types/leads";
 import type { LeadSource } from "../types/leads";
 
 interface MainLayoutProps {
@@ -12,12 +11,6 @@ interface MainLayoutProps {
   onSelectLead: (key: number, source: LeadSource) => void;
   search: string;
   onSearchChange: (v: string) => void;
-  statusFilter: LeadStatus | "all";
-  onStatusFilterChange: (v: LeadStatus | "all") => void;
-  minScore: number;
-  onMinScoreChange: (v: number) => void;
-  urgencyFilter: "all" | "immediate" | "immediate_near";
-  onUrgencyFilterChange: (v: "all" | "immediate" | "immediate_near") => void;
   onSaveActivity: (leadKey: number, payload: Record<string, unknown>) => Promise<void>;
   onSaveNotes: (leadKey: number, notes: string) => Promise<void>;
   onFilteredCountChange?: (count: number) => void;
@@ -33,12 +26,6 @@ export function MainLayout({
   onSelectLead,
   search,
   onSearchChange,
-  statusFilter,
-  onStatusFilterChange,
-  minScore,
-  onMinScoreChange,
-  urgencyFilter,
-  onUrgencyFilterChange,
   onSaveActivity,
   onSaveNotes,
   onFilteredCountChange,
@@ -66,12 +53,6 @@ export function MainLayout({
             onSelectLead={onSelectLead}
             search={search}
             onSearchChange={onSearchChange}
-            statusFilter={statusFilter}
-            onStatusFilterChange={onStatusFilterChange}
-            minScore={minScore}
-            onMinScoreChange={onMinScoreChange}
-            urgencyFilter={urgencyFilter}
-            onUrgencyFilterChange={onUrgencyFilterChange}
             onFilteredCountChange={onFilteredCountChange}
           />
         )}
@@ -79,6 +60,7 @@ export function MainLayout({
       <main className="main-layout-right">
         <LeadDetailPanel
           lead={selectedLead}
+          selectedSource={selectedSource}
           onSaveActivity={onSaveActivity}
           onSaveNotes={onSaveNotes}
         />
